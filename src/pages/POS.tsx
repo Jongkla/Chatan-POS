@@ -98,15 +98,26 @@ export default function POS() {
     }
   };
 
-  const handleScan = (scannedBarcode: string) => {
+  const handleScan = (scannedBarcode: string, isContinuous: boolean) => {
     const product = products.find(p => p.barcode === scannedBarcode);
     if (product) {
       addToCart(product);
-      setIsScanOpen(false);
+      if (!isContinuous) {
+        setIsScanOpen(false);
+      }
     } else {
-      setIsScanOpen(false);
-      setAddBarcode(scannedBarcode);
-      setIsAddOpen(true);
+      if (!isContinuous) {
+        setIsScanOpen(false);
+        setAddBarcode(scannedBarcode);
+        setIsAddOpen(true);
+      } else {
+        const wantToAdd = window.confirm(`Barcode not found: ${scannedBarcode}. Add it to database?`);
+        if (wantToAdd) {
+          setIsScanOpen(false);
+          setAddBarcode(scannedBarcode);
+          setIsAddOpen(true);
+        }
+      }
     }
   };
 
@@ -433,6 +444,9 @@ export default function POS() {
         <BarcodeScanner 
           onScan={handleScan}
           onClose={() => setIsScanOpen(false)}
+          cart={cart}
+          onUpdateQuantity={updateQuantity}
+          onRemoveFromCart={removeFromCart}
         />
       )}
 
