@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "User profile with roles",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "employee"] },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["username", "name", "role", "createdAt", "updatedAt"]
+    },
+    "product": {
+      "title": "Product",
+      "description": "Item in inventory",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "barcode": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["name", "price", "category", "createdAt", "updatedAt"]
+    },
+    "transaction": {
+      "title": "Transaction",
+      "description": "A checkout transaction record",
+      "type": "object",
+      "properties": {
+        "employeeId": { "type": "string" },
+        "total": { "type": "number" },
+        "items": { "type": "array" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["employeeId", "total", "items", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": { "$ref": "#/entities/user" },
+      "description": "User profiles"
+    },
+    "products": {
+      "schema": { "$ref": "#/entities/product" },
+      "description": "Products available"
+    },
+    "transactions": {
+      "schema": { "$ref": "#/entities/transaction" },
+      "description": "Completed transactions"
+    }
+  }
+}

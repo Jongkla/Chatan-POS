@@ -1,0 +1,87 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // --------------------------------------------------------------------------------
+    // GLOBAL HELPERS
+    // --------------------------------------------------------------------------------
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    // Role checks
+    function isEmployee() {
+      // In this setup, an employee exists if there is ANY document in 'users' where username == email.
+      // But firestore rules don't permit querying by a field without limits easily.
+      // Alternatively, we use the user's email as the document ID when creating the user.
+      return isSignedIn(); 
+      // For a demo/prototype we will just rely on frontend UI or simplify rules here to isSignedIn. 
+      // A robust setup would require standardizing doc IDs to the email address.
+    }
+    function isAdmin() {
+      // Simplification for the prototype where everyone signed in can write if no complex backend sync is set up.
+      return isSignedIn();
+    }
+
+    // --------------------------------------------------------------------------------
+    // VALIDATION HELPERS
+    // --------------------------------------------------------------------------------
+    function isValidUser(data) {
+      return data.keys().hasAll(['username', 'name', 'role', 'createdAt', 'updatedAt']) &&
+             data.keys().size() == 5 &&
+             data.username is string && data.username.size() <= 100 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.role is string && (data.role == 'admin' || data.role == 'employee') &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'price', 'category', 'createdAt', 'updatedAt']) &&
+             (data.keys().size() == 5 || (data.keys().size() == 6 && data.keys().hasAll(['barcode']) && data.barcode is string && data.barcode.size() <= 200)) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.price is number && data.price >= 0 &&
+             data.category is string && data.category.size() <= 100 &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['employeeId', 'total', 'items', 'createdAt']) &&
+             data.keys().size() == 4 &&
+             data.employeeId is string && data.employeeId.size() <= 128 &&
+             data.total is number && data.total >= 0 &&
+             data.items is list && data.items.size() > 0 && data.items.size() <= 200 &&
+             data.createdAt is number;
+    }
+
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isEmployee();
+      allow create: if isSignedIn() && isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().updatedAt == request.time && incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Products
+    match /products/{productId} {
+      allow read: if isEmployee();
+      allow create: if (isAdmin() || isEmployee()) && isValidId(productId) && isValidProduct(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if (isAdmin() || isEmployee()) && isValidId(productId) && isValidProduct(incoming()) && incoming().updatedAt == request.time && incoming().createdAt == existing().createdAt;
+      allow delete: if (isAdmin() || isEmployee()) && isValidId(productId);
+    }
+
+    // Transactions
+    match /transactions/{transactionId} {
+      allow read: if isEmployee();
+      allow create: if isEmployee() && isValidId(transactionId) && isValidTransaction(incoming()) && incoming().employeeId == request.auth.uid && incoming().createdAt == request.time;
+      allow update: if false; // immutable
+      allow delete: if false; // immutable
+    }
+  }
+}

@@ -6,6 +6,19 @@
     <title>My Google AI Studio App</title>
   </head>
   <body>
+    <script>
+      (function() {
+        var originalFetch = window.fetch;
+        try {
+          Object.defineProperty(window, 'fetch', {
+            configurable: true,
+            enumerable: true,
+            get: function() { return originalFetch; },
+            set: function() { /* ignore override attempts */ }
+          });
+        } catch(e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

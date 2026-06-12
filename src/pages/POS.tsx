@@ -4,6 +4,8 @@ import { LogOut, LayoutDashboard, ShoppingCart, Search, Moon, Sun, Monitor, Stor
 import { useStore } from "../store";
 import { getProducts, submitTransaction, addProduct, deleteProduct, Product, CartItem } from "../lib/api";
 import BarcodeScanner from "../components/BarcodeScanner";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 const CATEGORIES = ["All", "Grocery", "Vegetables", "Bananacue", "Other"];
 
@@ -40,22 +42,40 @@ export default function POS() {
   };
 
   useEffect(() => {
-    loadData();
+    const q = query(collection(db, "products"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data: Product[] = [];
+      snapshot.forEach((doc) => {
+        data.push({ id: doc.id, ...doc.data() } as Product);
+      });
+      setProducts(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Firestore realtime error", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addName || !addPrice) return;
-    await addProduct({ name: addName, price: parseFloat(addPrice), category: addCat, barcode: addBarcode || undefined });
-    setAddName(""); setAddPrice(""); setAddBarcode("");
-    setIsAddOpen(false);
-    loadData();
+    try {
+      await addProduct({ name: addName, price: parseFloat(addPrice), category: addCat, barcode: addBarcode || undefined });
+      setAddName(""); setAddPrice(""); setAddBarcode("");
+      setIsAddOpen(false);
+    } catch(err) {
+      alert("Failed to add product");
+    }
   };
 
   const handleDeleteProduct = async (id: string) => {
     if(!confirm("Delete this item?")) return;
-    await deleteProduct(id);
-    loadData();
+    try {
+      await deleteProduct(id);
+    } catch(err) {
+      alert("Failed to delete product");
+    }
   };
 
   const addToCart = (product: Product) => {
@@ -92,7 +112,6 @@ export default function POS() {
       setCart([]);
       setIsExactConfirmOpen(false);
       alert("Transaction successful!");
-      loadData();
     } catch (err) {
       alert("Failed to checkout");
     }
@@ -127,7 +146,6 @@ export default function POS() {
       setIsChangeOpen(false);
       setCashReceived("");
       alert(`Transaction successful! Change: ₱${change.toFixed(2)}`);
-      loadData();
     } catch (err) {
       alert("Failed to checkout");
     }
@@ -140,10 +158,10 @@ export default function POS() {
   });
 
   return (
-    <div className="flex flex-col md:flex-row h-[100dvh] w-full overflow-hidden bg-slate-950">
+    <div className="flex portrait:flex-col landscape:flex-row h-[100dvh] w-full overflow-hidden bg-slate-950">
       
       {/* Left Area - Navbar + Products */}
-      <div className="flex-1 flex flex-col min-h-0 bg-slate-100 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+      <div className="flex-1 flex flex-col min-h-0 bg-slate-100 dark:bg-slate-900 portrait:border-b landscape:border-r border-slate-200 dark:border-slate-800">
         
         {/* Header */}
         <header className="px-4 md:px-6 py-3 md:py-4 bg-white dark:bg-slate-800 flex items-center justify-between shadow-sm z-10 shrink-0">
@@ -228,7 +246,7 @@ export default function POS() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-4">
+          <div className="grid grid-cols-2 portrait:grid-cols-2 landscape:grid-cols-3 xl:grid-cols-4 gap-3 pb-4">
             {loading ? (
               <p className="col-span-full text-center py-10 text-slate-500 text-sm">Loading...</p>
             ) : filteredProducts.length === 0 ? (
@@ -261,7 +279,7 @@ export default function POS() {
       </div>
 
       {/* Right Area - Cart */}
-      <div className="w-full md:w-[360px] shrink-0 h-[45dvh] md:h-full bg-white dark:bg-slate-800 flex flex-col border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none z-20">
+      <div className="w-full landscape:w-[360px] shrink-0 portrait:h-[45dvh] landscape:h-full bg-white dark:bg-slate-800 flex flex-col portrait:border-t landscape:border-t-0 landscape:border-l border-slate-200 dark:border-slate-800 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] landscape:shadow-none z-20">
         <div className="p-3 md:p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0 bg-white dark:bg-slate-800">
           <h2 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-slate-500">
             <ShoppingCart size={16} /> Current Order
