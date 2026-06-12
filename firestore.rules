@@ -60,28 +60,16 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Users
     match /users/{userId} {
-      allow read: if isEmployee();
-      allow create: if isSignedIn() && isAdmin() && isValidId(userId) && isValidUser(incoming());
-      allow update: if isSignedIn() && isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().createdAt == existing().createdAt;
-      allow delete: if isAdmin() && isValidId(userId);
+      allow read, write: if isSignedIn();
     }
 
-    // Products
     match /products/{productId} {
-      allow read: if isEmployee();
-      allow create: if (isAdmin() || isEmployee()) && isValidId(productId) && isValidProduct(incoming());
-      allow update: if (isAdmin() || isEmployee()) && isValidId(productId) && isValidProduct(incoming()) && incoming().createdAt == existing().createdAt;
-      allow delete: if (isAdmin() || isEmployee()) && isValidId(productId);
+      allow read, write: if isSignedIn();
     }
 
-    // Transactions
     match /transactions/{transactionId} {
-      allow read: if isEmployee();
-      allow create: if isEmployee() && isValidId(transactionId) && isValidTransaction(incoming()) && incoming().employeeId == request.auth.uid;
-      allow update: if false; // immutable
-      allow delete: if false; // immutable
+      allow read, write: if isSignedIn();
     }
   }
 }

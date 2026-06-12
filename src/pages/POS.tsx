@@ -7,7 +7,7 @@ import BarcodeScanner from "../components/BarcodeScanner";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
-const CATEGORIES = ["All", "Grocery", "Vegetables", "Bananacue", "Other"];
+const CATEGORIES = ["All", "Grocery", "Drinks", "Vegetables", "Bananacue", "Other"];
 
 export default function POS() {
   const user = useStore((state) => state.user);
@@ -164,18 +164,18 @@ export default function POS() {
       <div className="flex-1 flex flex-col min-h-0 bg-slate-100 dark:bg-slate-900 portrait:border-b landscape:border-r border-slate-200 dark:border-slate-800">
         
         {/* Header */}
-        <header className="px-4 md:px-6 py-3 md:py-4 bg-white dark:bg-slate-800 flex items-center justify-between shadow-sm z-10 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary-500/20">
+        <header className="px-3 md:px-6 py-2 md:py-4 bg-white dark:bg-slate-800 flex items-center justify-between shadow-sm z-10 shrink-0">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary-500/20 shrink-0">
               <Store size={18} />
             </div>
-            <div>
-              <h2 className="font-bold text-base md:text-lg leading-tight text-slate-900 dark:text-white">Chatan Store</h2>
-              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 text-ellipsis overflow-hidden whitespace-nowrap max-w-[100px] md:max-w-none">{user?.name}</p>
+            <div className="min-w-0">
+              <h2 className="font-bold text-sm md:text-lg leading-tight text-slate-900 dark:text-white truncate">Chatan Store</h2>
+              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 truncate">{user?.name}</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-1 md:gap-3">
+          <div className="flex items-center gap-1 md:gap-3 shrink-0">
             <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition">
               {theme === "dark" ? <Sun size={18} className="text-slate-400" /> : <Moon size={18} className="text-slate-600" />}
             </button>
@@ -246,7 +246,7 @@ export default function POS() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 portrait:grid-cols-2 landscape:grid-cols-3 xl:grid-cols-4 gap-3 pb-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-3 pb-4 px-1">
             {loading ? (
               <p className="col-span-full text-center py-10 text-slate-500 text-sm">Loading...</p>
             ) : filteredProducts.length === 0 ? (
@@ -279,15 +279,15 @@ export default function POS() {
       </div>
 
       {/* Right Area - Cart */}
-      <div className="w-full landscape:w-[360px] shrink-0 portrait:h-[45dvh] landscape:h-full bg-white dark:bg-slate-800 flex flex-col portrait:border-t landscape:border-t-0 landscape:border-l border-slate-200 dark:border-slate-800 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] landscape:shadow-none z-20">
-        <div className="p-3 md:p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0 bg-white dark:bg-slate-800">
-          <h2 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-slate-500">
+      <div className="w-full landscape:w-[280px] lg:landscape:w-[360px] shrink-0 portrait:h-[45dvh] landscape:h-full bg-white dark:bg-slate-800 flex flex-col portrait:border-t-2 landscape:border-t-0 landscape:border-l border-slate-200 dark:border-slate-800 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] landscape:shadow-none z-20">
+        <div className="p-2 md:p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0 bg-white dark:bg-slate-800">
+          <h2 className="font-bold flex items-center gap-2 text-[11px] md:text-sm uppercase tracking-widest text-slate-500">
             <ShoppingCart size={16} /> Current Order
           </h2>
           <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest">{totalItems} Items</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 md:p-5 bg-slate-50/50 dark:bg-slate-900/30">
+        <div className="flex-1 overflow-y-auto p-2 md:p-4 bg-slate-50/50 dark:bg-slate-900/30">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 space-y-3">
               <ShoppingCart size={40} />
@@ -296,19 +296,19 @@ export default function POS() {
           ) : (
             <div className="grid grid-cols-2 gap-1.5">
               {cart.map(item => (
-                <div key={item.id} className="flex flex-col bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-lg p-1.5 relative shadow-sm">
-                  <button onClick={() => removeFromCart(item.id)} className="absolute top-1 right-1 p-0.5 text-slate-300 hover:text-red-500 transition-colors">
-                    <Trash2 size={10} />
+                <div key={item.id} className="flex flex-col bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-lg p-1.5 relative shadow-sm h-14">
+                  <button onClick={() => removeFromCart(item.id)} className="absolute top-1 right-1 p-1 text-slate-300 hover:text-red-500 transition-colors z-10 bg-white/50 dark:bg-slate-800/50 rounded-full before:absolute before:-inset-3 before:content-['']">
+                    <Trash2 size={14} />
                   </button>
-                  <div className="pr-4 truncate w-full">
-                    <span className="font-bold text-slate-900 dark:text-white text-[10px]">{item.name}</span>
+                  <div className="pr-5 truncate w-full flex-1 pointer-events-none">
+                    <span className="font-bold text-slate-900 dark:text-white text-[10px] sm:text-xs leading-none">{item.name}</span>
                   </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="font-black text-primary-600 dark:text-primary-400 text-[10px]">₱{(item.price * item.quantity).toFixed(2)}</span>
-                    <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded shadow-inner">
-                      <button onClick={() => updateQuantity(item.id, -1)} className="text-slate-500 hover:text-primary-500 hover:bg-slate-200 dark:hover:bg-slate-800 w-4 h-4 flex items-center justify-center rounded font-black leading-none -mt-0.5"><span className="text-xs">-</span></button>
-                      <span className="w-3 text-center font-bold text-slate-900 dark:text-slate-100 text-[9px]">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, 1)} className="text-slate-500 hover:text-primary-500 hover:bg-slate-200 dark:hover:bg-slate-800 w-4 h-4 flex items-center justify-center rounded font-black leading-none -mt-0.5"><span className="text-xs">+</span></button>
+                  <div className="flex justify-between items-center mt-auto">
+                    <span className="font-black text-primary-600 dark:text-primary-400 text-[10px] sm:text-[11px] truncate mr-1">₱{(item.price * item.quantity).toFixed(2)}</span>
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded shadow-inner shrink-0 scale-125 origin-right">
+                      <button onClick={() => updateQuantity(item.id, -1)} className="relative text-slate-500 hover:text-primary-500 hover:bg-slate-200 dark:hover:bg-slate-800 w-4 h-4 flex items-center justify-center rounded font-black leading-none before:absolute before:-inset-x-3 before:-inset-y-4 before:content-[''] before:z-10"><span className="text-xs pb-0.5 relative z-20">-</span></button>
+                      <span className="w-3.5 text-center font-bold text-slate-900 dark:text-slate-100 text-[9px] relative z-20 pointer-events-none">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.id, 1)} className="relative text-slate-500 hover:text-primary-500 hover:bg-slate-200 dark:hover:bg-slate-800 w-4 h-4 flex items-center justify-center rounded font-black leading-none before:absolute before:-inset-x-3 before:-inset-y-4 before:content-[''] before:z-10"><span className="text-xs pb-0.5 relative z-20">+</span></button>
                     </div>
                   </div>
                 </div>
@@ -317,23 +317,23 @@ export default function POS() {
           )}
         </div>
 
-        <div className="p-3 md:p-5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 shrink-0">
-          <div className="space-y-1 mb-3 md:mb-4 flex items-center justify-between">
+        <div className="p-2 md:p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 shrink-0">
+          <div className="space-y-1 mb-2 md:mb-4 flex items-center justify-between">
             <span className="block text-[10px] md:text-xs uppercase tracking-widest font-bold text-slate-400">Total</span>
-            <span className="text-primary-600 dark:text-primary-400 text-xl md:text-2xl font-black">₱{total.toFixed(2)}</span>
+            <span className="text-primary-600 dark:text-primary-400 text-xl font-black">₱{total.toFixed(2)}</span>
           </div>
           <div className="flex gap-2">
             <button 
               onClick={() => setIsExactConfirmOpen(true)}
               disabled={cart.length === 0}
-              className="flex-[1] py-2.5 md:py-3.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 text-[10px] md:text-xs uppercase tracking-widest active:scale-95"
+              className="flex-[1] py-2 md:py-3 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 text-[10px] md:text-xs uppercase tracking-widest active:scale-95"
             >
               Exact
             </button>
             <button 
               onClick={() => setIsChangeOpen(true)}
               disabled={cart.length === 0}
-              className="flex-[2] py-2.5 md:py-3.5 bg-gradient-to-br from-primary-600 to-indigo-700 hover:from-primary-500 hover:to-indigo-600 text-white rounded-xl font-black transition-all disabled:opacity-50 text-[11px] md:text-sm uppercase tracking-widest shadow-xl shadow-primary-500/20 active:scale-95"
+              className="flex-[2.5] py-2 md:py-3 bg-gradient-to-br from-primary-600 to-indigo-700 hover:from-primary-500 hover:to-indigo-600 text-white rounded-xl font-black transition-all disabled:opacity-50 text-[11px] md:text-xs uppercase tracking-widest shadow-lg shadow-primary-500/20 active:scale-95"
             >
               Cash Payment
             </button>
@@ -343,15 +343,15 @@ export default function POS() {
 
       {/* Add Item Modal */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm shadow-2xl">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-slate-950/60 backdrop-blur-sm shadow-2xl">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[95dvh]">
+            <div className="p-3 md:p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 shrink-0">
               <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-[11px]">Add New Item</h3>
-              <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700 rounded-full p-1 transition-colors">
+              <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700 rounded-full p-1.5 transition-colors">
                 <X size={14} />
               </button>
             </div>
-            <form onSubmit={handleAddProduct} className="p-5 flex flex-col gap-4">
+            <form onSubmit={handleAddProduct} className="p-4 md:p-5 flex flex-col gap-3 overflow-y-auto">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Item Name</label>
                 <input type="text" required value={addName} onChange={e => setAddName(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-slate-900 dark:text-white font-medium placeholder-slate-400" placeholder="e.g. Pancit Canton" />
@@ -370,7 +370,7 @@ export default function POS() {
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Barcode (Optional)</label>
                 <input type="text" value={addBarcode} onChange={e => setAddBarcode(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-slate-900 dark:text-white font-medium placeholder-slate-400" placeholder="e.g. 123456789" />
               </div>
-              <button type="submit" className="mt-4 w-full py-3.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg shadow-primary-500/20 active:scale-95">
+              <button type="submit" className="mt-2 text-white hover:bg-primary-600 bg-primary-500 w-full py-3 md:py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg active:scale-95 shrink-0">
                 Save Item
               </button>
             </form>
@@ -380,17 +380,17 @@ export default function POS() {
 
       {/* Cash Payment Modal */}
       {isChangeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm shadow-2xl">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-slate-950/60 backdrop-blur-sm shadow-2xl">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[95dvh]">
+            <div className="p-3 md:p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 shrink-0">
               <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-[11px]">Cash Payment</h3>
-              <button onClick={() => { setIsChangeOpen(false); setCashReceived(""); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700 rounded-full p-1 transition-colors">
+              <button onClick={() => { setIsChangeOpen(false); setCashReceived(""); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700 rounded-full p-1.5 transition-colors">
                 <X size={14} />
               </button>
             </div>
             
-            <form onSubmit={handleCashCheckout} className="p-5 flex flex-col gap-4">
-              <div className="flex justify-between items-center mb-2 px-2 py-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+            <form onSubmit={handleCashCheckout} className="p-4 md:p-5 flex flex-col gap-3 overflow-y-auto">
+              <div className="flex justify-between items-center mb-1 px-2 py-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
                 <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500 px-2">Total Due</span>
                 <span className="text-lg font-black text-rose-500 pr-2">₱{total.toFixed(2)}</span>
               </div>
@@ -419,7 +419,7 @@ export default function POS() {
               <button 
                 type="submit" 
                 disabled={!cashReceived || parseFloat(cashReceived) < total}
-                className="mt-4 w-full py-3.5 bg-gradient-to-br from-primary-600 to-indigo-700 hover:from-primary-500 hover:to-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg shadow-primary-500/20 active:scale-95 disabled:opacity-50"
+                className="mt-2 w-full py-3 md:py-3.5 bg-gradient-to-br from-primary-600 to-indigo-700 hover:from-primary-500 hover:to-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg active:scale-95 disabled:opacity-50 shrink-0"
               >
                 Complete Transaction
               </button>
@@ -430,16 +430,16 @@ export default function POS() {
 
       {/* Exact Payment Modal */}
       {isExactConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm shadow-2xl">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-slate-950/60 backdrop-blur-sm shadow-2xl">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[95dvh]">
+            <div className="p-3 md:p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 shrink-0">
               <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-[11px]">Confirm Exact Payment</h3>
-              <button onClick={() => setIsExactConfirmOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700 rounded-full p-1 transition-colors">
+              <button onClick={() => setIsExactConfirmOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700 rounded-full p-1.5 transition-colors">
                 <X size={14} />
               </button>
             </div>
             
-            <div className="p-5 flex flex-col gap-4">
+            <div className="p-4 md:p-5 flex flex-col gap-3 overflow-y-auto">
               <div className="text-center mb-2">
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Confirm exact payment of</p>
                 <span className="text-2xl font-black text-primary-500">₱{total.toFixed(2)}</span>
