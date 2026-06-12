@@ -134,8 +134,8 @@ export default function BarcodeScanner({ onScan, onCameraError }: BarcodeScanner
 
   return (
     <div className="flex-1 w-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-900 overflow-hidden">
-      <div className="w-full max-w-[500px] aspect-square rounded-3xl overflow-hidden border-4 border-indigo-500/20 shadow-2xl shadow-indigo-500/10 bg-black flex items-center justify-center relative [&_video]:object-cover">
-        <div id="reader" className="absolute inset-0 z-0 w-full h-full flex flex-col items-center justify-center bg-black"></div>
+      <div className="w-full max-w-[400px] aspect-[4/3] rounded-3xl overflow-hidden border-4 border-indigo-500/10 shadow-2xl shadow-indigo-500/10 bg-black/5 flex items-center justify-center relative [&_video]:object-cover [&_video]:w-full [&_video]:h-full [&>div]:w-full [&>div]:h-full">
+        <div id="reader" className="absolute inset-0 z-0 w-full h-full flex flex-col items-center justify-center"></div>
         
         {hasError && (
           <div className="absolute inset-0 z-10 w-full bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-6">
