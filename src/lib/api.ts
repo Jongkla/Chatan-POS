@@ -51,6 +51,14 @@ export async function deleteProduct(id: string) {
   return { success: true };
 }
 
+export async function updateProduct(id: string, updates: Partial<Product>) {
+  const productRef = doc(db, "products", id);
+  await setDoc(productRef, {
+    ...updates,
+    updatedAt: Date.now()
+  }, { merge: true });
+}
+
 export async function submitTransaction(employeeId: string, items: CartItem[], total: number) {
   const newRef = doc(collection(db, "transactions"));
   await setDoc(newRef, {

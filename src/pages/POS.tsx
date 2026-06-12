@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { LogOut, LayoutDashboard, ShoppingCart, Search, Moon, Sun, Monitor, Store, Plus, X, Trash2, ScanLine } from "lucide-react";
 import { useStore } from "../store";
-import { getProducts, submitTransaction, addProduct, deleteProduct, Product, CartItem } from "../lib/api";
+import { getProducts, submitTransaction, addProduct, deleteProduct, updateProduct, Product, CartItem } from "../lib/api";
 import BarcodeScanner from "../components/BarcodeScanner";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -32,6 +32,60 @@ export default function POS() {
   const [isChangeOpen, setIsChangeOpen] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
   const [isExactConfirmOpen, setIsExactConfirmOpen] = useState(false);
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editCat, setEditCat] = useState("Grocery");
+  const [editBarcode, setEditBarcode] = useState("");
+
+  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isLongPressRef = React.useRef(false);
+
+  const handlePointerDown = (p: Product, e: React.PointerEvent) => {
+    e.preventDefault();
+    isLongPressRef.current = false;
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      setEditProduct(p);
+      setEditName(p.name);
+      setEditPrice(p.price.toString());
+      setEditCat(p.category);
+      setEditBarcode(p.barcode || "");
+      setIsEditOpen(true);
+    }, 500);
+  };
+
+  const handlePointerUp = (p: Product, e: React.PointerEvent) => {
+    e.preventDefault();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!isLongPressRef.current) {
+      addToCart(p);
+    }
+  };
+
+  const handlePointerCancel = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    isLongPressRef.current = false;
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName || !editPrice || !editProduct) return;
+    try {
+      await updateProduct(editProduct.id, {
+        name: editName,
+        price: parseFloat(editPrice),
+        category: editCat,
+        barcode: editBarcode || undefined
+      });
+      setIsEditOpen(false);
+    } catch(err) {
+      console.error(err);
+      alert("Failed to update product");
+    }
+  };
 
   const loadData = () => {
     setLoading(true);
@@ -255,13 +309,18 @@ export default function POS() {
               filteredProducts.map(p => (
                 <button 
                   key={p.id}
-                  onClick={() => addToCart(p)}
-                  className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-xl shadow-sm text-left hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-primary-500 border border-transparent dark:border-slate-700 active:scale-95 flex flex-col justify-between group relative"
+                  onPointerDown={(e) => handlePointerDown(p, e)}
+                  onPointerUp={(e) => handlePointerUp(p, e)}
+                  onPointerCancel={handlePointerCancel}
+                  onPointerLeave={handlePointerCancel}
+                  className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-xl shadow-sm text-left hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-primary-500 border border-transparent dark:border-slate-700 active:scale-95 flex flex-col justify-between group relative select-none touch-none"
                 >
                   <div className="flex justify-between items-start gap-1 w-full">
                     <p className="font-medium text-slate-900 dark:text-slate-100 text-xs md:text-sm leading-snug break-words pr-4">{p.name}</p>
                     <div 
                       onClick={(e) => { e.stopPropagation(); handleDeleteProduct(p.id); }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onPointerUp={(e) => e.stopPropagation()}
                       className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-colors"
                     >
                       <Trash2 size={12} />
@@ -460,6 +519,45 @@ export default function POS() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Item Modal */}
+      {isEditOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-slate-950/60 backdrop-blur-sm shadow-2xl">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[95dvh]">
+            <div className="p-3 md:p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 shrink-0">
+              <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-[11px]">Edit Item</h3>
+              <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700 rounded-full p-1.5 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="p-4 md:p-5 flex flex-col gap-3 overflow-y-auto">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Item Name</label>
+                <input type="text" required value={editName} onChange={e => setEditName(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-slate-900 dark:text-white font-medium placeholder-slate-400" placeholder="e.g. Pancit Canton" />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Price (₱)</label>
+                  <input type="number" step="0.01" required value={editPrice} onChange={e => setEditPrice(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-slate-900 dark:text-white font-medium placeholder-slate-400" placeholder="0.00" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Category</label>
+                  <select value={editCat} onChange={e => setEditCat(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-slate-900 dark:text-white font-medium cursor-pointer">
+                    {CATEGORIES.filter(c => c !== "All").map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Barcode (Optional)</label>
+                <input type="text" value={editBarcode} onChange={e => setEditBarcode(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm text-slate-900 dark:text-white font-medium placeholder-slate-400" placeholder="e.g. 123456789" />
+              </div>
+              <button type="submit" className="mt-2 text-white hover:bg-primary-600 bg-primary-500 w-full py-3 md:py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg active:scale-95 shrink-0">
+                Save Changes
+              </button>
+            </form>
           </div>
         </div>
       )}
