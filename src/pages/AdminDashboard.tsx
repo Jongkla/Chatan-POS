@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Users, FileText, Trash2, Plus, Store } from "lucide-react";
 import { getDailyReport, getUsers, createUser, deleteUser, User } from "../lib/api";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 export default function AdminDashboard() {
   const [report, setReport] = useState<any>(null);
@@ -14,34 +16,53 @@ export default function AdminDashboard() {
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<"admin" | "employee">("employee");
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [r, u] = await Promise.all([getDailyReport(), getUsers()]);
-      setReport(r);
-      setUsers(u);
-    } catch {
-      //
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
+    // Keep users fetching static for now or real-time if needed
+    getUsers().then(u => setUsers(u)).catch(console.error);
+
+    // Realtime daily report
+    const startOfDay = new Date();
+    startOfDay.setHours(0,0,0,0);
+    const q = query(collection(db, "transactions"), where("createdAt", ">=", startOfDay.getTime()));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const transactions = snapshot.docs.map(d => d.data());
+      
+      let totalSales = 0;
+      let transactionCount = transactions.length;
+      let salesByEmployee:any = {};
+
+      transactions.forEach(t => {
+        totalSales += t.total;
+        if (!salesByEmployee[t.employeeId]) salesByEmployee[t.employeeId] = 0;
+        salesByEmployee[t.employeeId] += t.total;
+      });
+
+      setReport({
+        totalSales,
+        transactionCount,
+        salesByEmployee
+      });
+      setLoading(false);
+    }, (error) => {
+      console.error(error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     await createUser({ username: newUname, password: newPwd, name: newName, role: newRole });
     setNewUname(""); setNewPwd(""); setNewName("");
-    loadData();
+    getUsers().then(setUsers);
   };
 
   const handleDeleteUser = async (id: string) => {
     if(!confirm("Are you sure?")) return;
     await deleteUser(id);
-    loadData();
+    getUsers().then(setUsers);
   };
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading dashboard...</div>;
@@ -154,11 +175,7 @@ export default function AdminDashboard() {
                   className="px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
                 />
                 <input 
-                  type="text" placeholder="Username" required value={newUname} onChange={e=>setNewUname(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
-                />
-                <input 
-                  type="password" placeholder="Password" required value={newPwd} onChange={e=>setNewPwd(e.target.value)}
+                  type="email" placeholder="Google Email Address" required value={newUname} onChange={e=>setNewUname(e.target.value)}
                   className="px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-primary-500 text-sm"
                 />
                 <select 
