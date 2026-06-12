@@ -25,7 +25,7 @@ export default function POS() {
   const [addCat, setAddCat] = useState("Grocery");
   const [addBarcode, setAddBarcode] = useState("");
 
-  const [isScanOpen, setIsScanOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "scan">("grid");
 
   const [isChangeOpen, setIsChangeOpen] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
@@ -98,26 +98,17 @@ export default function POS() {
     }
   };
 
-  const handleScan = (scannedBarcode: string, isContinuous: boolean) => {
+  const handleScan = (scannedBarcode: string) => {
     const product = products.find(p => p.barcode === scannedBarcode);
     if (product) {
       addToCart(product);
-      if (!isContinuous) {
-        setIsScanOpen(false);
-      }
     } else {
-      if (!isContinuous) {
-        setIsScanOpen(false);
-        setAddBarcode(scannedBarcode);
-        setIsAddOpen(true);
-      } else {
         const wantToAdd = window.confirm(`Barcode not found: ${scannedBarcode}. Add it to database?`);
         if (wantToAdd) {
-          setIsScanOpen(false);
+          setViewMode("grid");
           setAddBarcode(scannedBarcode);
           setIsAddOpen(true);
         }
-      }
     }
   };
 
@@ -181,7 +172,21 @@ export default function POS() {
           </div>
         </header>
 
-        {/* Product Search & Grid */}
+        {/* Main Content Area */}
+        {viewMode === "scan" ? (
+          <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-slate-100 dark:bg-slate-900">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
+              <h2 className="font-bold uppercase tracking-widest text-slate-500 text-sm">Scan Item</h2>
+              <button 
+                onClick={() => setViewMode("grid")}
+                className="py-2 px-4 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-xs font-bold transition hover:bg-slate-700 dark:hover:bg-slate-600 shadow-md flex items-center gap-2"
+              >
+                Back to Grid
+              </button>
+            </div>
+            <BarcodeScanner onScan={handleScan} />
+          </div>
+        ) : (
         <div className="p-3 md:p-6 flex-1 overflow-y-auto flex flex-col min-h-0">
           <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-4 shrink-0">
             <div className="relative flex-1">
@@ -196,7 +201,7 @@ export default function POS() {
             </div>
             <div className="flex gap-2 shrink-0">
               <button 
-                onClick={() => setIsScanOpen(true)}
+                onClick={() => setViewMode("scan")}
                 className="flex items-center justify-center gap-1.5 py-2 md:py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] md:text-sm font-bold uppercase tracking-widest transition shadow-lg shadow-indigo-500/20"
               >
                 <ScanLine size={14} className="md:w-4 md:h-4 w-3.5 h-3.5" /> <span className="hidden md:inline">Scan</span>
@@ -252,6 +257,7 @@ export default function POS() {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Right Area - Cart */}
@@ -438,16 +444,6 @@ export default function POS() {
             </div>
           </div>
         </div>
-      )}
-
-      {isScanOpen && (
-        <BarcodeScanner 
-          onScan={handleScan}
-          onClose={() => setIsScanOpen(false)}
-          cart={cart}
-          onUpdateQuantity={updateQuantity}
-          onRemoveFromCart={removeFromCart}
-        />
       )}
 
     </div>

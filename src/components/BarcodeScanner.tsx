@@ -1,41 +1,50 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, RefreshCcw, ShoppingCart, Trash2 } from 'lucide-react';
-import { CartItem } from '../lib/api';
+import { RefreshCcw, Camera } from 'lucide-react';
 
 interface BarcodeScannerProps {
-  onScan: (barcode: string, isContinuous: boolean) => void;
-  onClose: () => void;
-  cart: CartItem[];
-  onUpdateQuantity: (id: string, delta: number) => void;
-  onRemoveFromCart: (id: string) => void;
+  onScan: (barcode: string) => void;
+  onCameraError?: (error: string) => void;
 }
+
+let audioCtx: AudioContext | null = null;
 
 const playBeep = () => {
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+    if (!audioCtx) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      audioCtx = new AudioContextClass();
+    }
+    
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    // Barcode scanner beep profile (high pitch square wave, short duration)
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(2700, audioCtx.currentTime);
+    
+    // Quick ramp up and down for a crisp beep
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
+    gainNode.gain.setValueAtTime(1, audioCtx.currentTime + 0.05);
+    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
 
     osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    gainNode.connect(audioCtx.destination);
 
-    osc.start();
-    osc.stop(ctx.currentTime + 0.1);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.1);
   } catch (err) {
     console.error("Audio beep failed", err);
   }
 };
 
-export default function BarcodeScanner({ onScan, onClose, cart, onUpdateQuantity, onRemoveFromCart }: BarcodeScannerProps) {
-  const [isContinuous, setIsContinuous] = useState(false);
+export default function BarcodeScanner({ onScan, onCameraError }: BarcodeScannerProps) {
   const [lastScanned, setLastScanned] = useState({ code: '', time: 0 });
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -44,16 +53,16 @@ export default function BarcodeScanner({ onScan, onClose, cart, onUpdateQuantity
 
   const handleScanSuccess = useCallback((decodedText: string) => {
     const now = Date.now();
-    // Prevent scanning the same code multiple times quickly
-    if (lastScanned.code === decodedText && now - lastScanned.time < 2000) {
+    // Prevent scanning the same code multiple times quickly (debounce 1.5s)
+    if (lastScanned.code === decodedText && now - lastScanned.time < 1500) {
       return;
     }
     
     playBeep();
     setLastScanned({ code: decodedText, time: now });
     
-    onScan(decodedText, isContinuous);
-  }, [lastScanned, isContinuous, onScan]);
+    onScan(decodedText);
+  }, [lastScanned, onScan]);
 
   useEffect(() => {
     let isMounted = true;
@@ -78,7 +87,7 @@ export default function BarcodeScanner({ onScan, onClose, cart, onUpdateQuantity
           await scannerRef.current.start(
             cameraId,
             {
-              fps: 10,
+              fps: 15,
               qrbox: { width: 250, height: 150 },
               aspectRatio: 1.0,
             },
@@ -87,7 +96,9 @@ export default function BarcodeScanner({ onScan, onClose, cart, onUpdateQuantity
           );
         } else {
           setHasError(true);
-          setErrorMessage("No cameras found on this device.");
+          const errText = "No cameras found on this device.";
+          setErrorMessage(errText);
+          if (onCameraError) onCameraError(errText);
         }
       } catch (err: any) {
         if (!isMounted) return;
@@ -101,7 +112,7 @@ export default function BarcodeScanner({ onScan, onClose, cart, onUpdateQuantity
           await scannerRef.current.start(
             { facingMode: "environment" },
             {
-              fps: 10,
+              fps: 15,
               qrbox: { width: 250, height: 150 },
               aspectRatio: 1.0,
             },
@@ -113,17 +124,19 @@ export default function BarcodeScanner({ onScan, onClose, cart, onUpdateQuantity
           if (!isMounted) return;
           console.error("Fallback scanner failed too", fallbackErr);
           setHasError(true);
-          setErrorMessage(fallbackErr?.message || "Could not access the camera. Please ensure permissions are granted.");
+          const errText = fallbackErr?.message || "Could not access the camera. Please ensure permissions are granted.";
+          setErrorMessage(errText);
+          if (onCameraError) onCameraError(errText);
         }
       } finally {
         isInitializing.current = false;
       }
     };
 
-    // Small delay to ensure the modal DOM is fully painted
+    // Small delay to ensure DOM is fully painted
     const timeoutId = setTimeout(() => {
       initializeScanner();
-    }, 100);
+    }, 50);
 
     return () => {
       isMounted = false;
@@ -140,101 +153,46 @@ export default function BarcodeScanner({ onScan, onClose, cart, onUpdateQuantity
         }
       }
     };
-  }, [handleScanSuccess]);
+  }, [handleScanSuccess, onCameraError]);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm shadow-2xl">
-      <div className={`bg-white dark:bg-slate-800 w-full max-w-md ${isContinuous ? 'h-[90vh]' : ''} rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col transition-all duration-300`}>
-        <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-          <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-[12px]">Scan Barcode</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700 rounded-full p-1.5 transition-colors">
-            <X size={16} />
-          </button>
-        </div>
+    <div className="flex-1 w-full flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-900 overflow-hidden">
+      <div className="w-full max-w-[400px] aspect-square rounded-3xl overflow-hidden border-4 border-indigo-500/20 shadow-2xl shadow-indigo-500/10 bg-black flex items-center justify-center relative">
+        <div id="reader" className="w-full absolute inset-0"></div>
         
-        <div className={`p-6 flex flex-col gap-5 items-center ${isContinuous ? 'pb-4 shrink-0' : ''}`}>
-          <div className="w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden border-2 border-primary-500 shadow-inner bg-black flex items-center justify-center relative">
-            <div id="reader" className="w-full absolute inset-0"></div>
-            
-            {hasError ? (
-              <div className="text-center p-4 z-10 w-full bg-black/80 h-full flex flex-col items-center justify-center backdrop-blur-sm">
-                <span className="text-red-500 font-bold mb-2">Camera Error</span>
-                <p className="text-xs text-slate-300">{errorMessage}</p>
-                <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700">Reload Page</button>
-              </div>
-            ) : (
-              <>
-                {/* Overlay to hide the "powered by html5-qrcode" watermark somewhat, although it might be deep in the DOM */}
-                <div className="absolute inset-0 pointer-events-none border-4 border-black/10 rounded-xl z-10" style={{boxShadow: 'inset 0 0 0 1000px rgba(0,0,0,0.4)', clipPath: 'polygon(0% 0%, 0% 100%, 15% 100%, 15% 30%, 85% 30%, 85% 70%, 15% 70%, 15% 100%, 100% 100%, 100% 0%)'}}></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-2/5 border-2 border-primary-500 rounded-lg pointer-events-none z-100">
-                  <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-red-500 opacity-50 shadow-[0_0_8px_2px_rgba(239,68,68,0.5)]"></div>
-                </div>
-              </>
-            )}
+        {hasError ? (
+          <div className="text-center p-6 z-10 w-full bg-black/90 h-full flex flex-col items-center justify-center backdrop-blur-md">
+            <Camera className="text-slate-600 mb-3" size={32} />
+            <span className="text-red-400 font-bold mb-2">Camera Access Required</span>
+            <p className="text-xs text-slate-400 leading-relaxed text-center max-w-[250px]">{errorMessage}</p>
+            <button onClick={() => window.location.reload()} className="mt-6 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-500/20 uppercase tracking-widest">Reload Page</button>
           </div>
-          
-          <div className="flex flex-col items-center gap-4 w-full">
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center">Center the barcode inside the frame</p>
-            
-            <label className="flex items-center gap-3 bg-slate-100 dark:bg-slate-900 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer w-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-              <div className="relative">
-                <input type="checkbox" className="sr-only peer" checked={isContinuous} onChange={(e) => setIsContinuous(e.target.checked)} />
-                <div className="w-10 h-5 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-500"></div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">Continuous Mode</span>
-                <span className="text-[10px] text-slate-500 uppercase tracking-widest">Scan multiple items rapidly</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        {isContinuous && (
-          <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50 dark:bg-slate-900/30 border-t border-slate-200 dark:border-slate-800">
-            <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0 bg-white dark:bg-slate-800">
-              <h2 className="font-bold flex items-center gap-2 text-[10px] uppercase tracking-widest text-slate-500">
-                <ShoppingCart size={14} /> Scanned Items
-              </h2>
-              <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest">{cart.reduce((sum, item) => sum + item.quantity, 0)} Items</span>
+        ) : (
+          <>
+            {/* Overlay to hide the "powered by html5-qrcode" watermark somewhat, although it might be deep in the DOM */}
+            <div className="absolute inset-0 pointer-events-none border-[12px] border-black/30 rounded-3xl z-10" style={{boxShadow: 'inset 0 0 0 1000px rgba(0,0,0,0.3)', clipPath: 'polygon(0% 0%, 0% 100%, 15% 100%, 15% 30%, 85% 30%, 85% 70%, 15% 70%, 15% 100%, 100% 100%, 100% 0%)'}}></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-2/5 border-2 border-indigo-500 rounded-lg pointer-events-none z-20 flex items-center justify-center">
+               {/* Laser line inside target box */}
+               <div className="w-full h-1 bg-red-500 opacity-80 shadow-[0_0_12px_3px_rgba(239,68,68,0.6)] animate-pulse"></div>
             </div>
-            <div className="flex-1 overflow-y-auto p-3">
-              {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 space-y-2">
-                  <ShoppingCart size={32} />
-                  <p className="text-[10px] uppercase tracking-widest font-bold">Cart is empty</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {cart.map(item => (
-                    <div key={item.id} className="flex flex-col bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-lg p-2.5 relative shadow-sm">
-                      <button onClick={() => onRemoveFromCart(item.id)} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-colors">
-                        <Trash2 size={12} />
-                      </button>
-                      <div className="pr-6">
-                        <span className="font-bold text-slate-900 dark:text-white text-[11px]">{item.name}</span>
-                      </div>
-                      <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
-                        <span className="font-black text-primary-600 dark:text-primary-400 text-[11px]">₱{(item.price * item.quantity).toFixed(2)}</span>
-                        <div className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-md p-0.5 shadow-inner">
-                          <button onClick={() => onUpdateQuantity(item.id, -1)} className="text-slate-500 hover:text-primary-500 hover:bg-white dark:hover:bg-slate-800 w-5 h-5 flex items-center justify-center rounded font-black leading-none -mt-0.5"><span className="text-sm">-</span></button>
-                          <span className="w-5 text-center font-bold text-slate-900 dark:text-slate-100 text-[10px]">{item.quantity}</span>
-                          <button onClick={() => onUpdateQuantity(item.id, 1)} className="text-slate-500 hover:text-primary-500 hover:bg-white dark:hover:bg-slate-800 w-5 h-5 flex items-center justify-center rounded font-black leading-none -mt-0.5"><span className="text-sm">+</span></button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 shrink-0">
-               <div className="flex items-center justify-between">
-                 <span className="block text-[10px] uppercase tracking-widest font-bold text-slate-400">Total</span>
-                 <span className="text-primary-600 dark:text-primary-400 text-lg font-black">₱{cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</span>
-               </div>
-            </div>
-          </div>
+            {/* Corner markers for aesthetics */}
+            <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-indigo-500 rounded-tl-xl pointer-events-none z-20"></div>
+            <div className="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-indigo-500 rounded-tr-xl pointer-events-none z-20"></div>
+            <div className="absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 border-indigo-500 rounded-bl-xl pointer-events-none z-20"></div>
+            <div className="absolute bottom-4 right-4 w-8 h-8 border-b-4 border-r-4 border-indigo-500 rounded-br-xl pointer-events-none z-20"></div>
+          </>
         )}
       </div>
+      
+      {!hasError && (
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            Continuous Scan Active
+          </span>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center mt-2 max-w-[250px]">Point the camera at an item's barcode to add it automatically.</p>
+        </div>
+      )}
     </div>
   );
 }
