@@ -44,7 +44,6 @@ export default function POS() {
   const isLongPressRef = React.useRef(false);
 
   const handlePointerDown = (p: Product, e: React.PointerEvent) => {
-    e.preventDefault();
     isLongPressRef.current = false;
     timerRef.current = setTimeout(() => {
       isLongPressRef.current = true;
@@ -58,11 +57,14 @@ export default function POS() {
   };
 
   const handlePointerUp = (p: Product, e: React.PointerEvent) => {
-    e.preventDefault();
     if (timerRef.current) clearTimeout(timerRef.current);
     if (!isLongPressRef.current) {
       addToCart(p);
     }
+  };
+
+  const handlePointerMove = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
   };
 
   const handlePointerCancel = () => {
@@ -311,9 +313,10 @@ export default function POS() {
                   key={p.id}
                   onPointerDown={(e) => handlePointerDown(p, e)}
                   onPointerUp={(e) => handlePointerUp(p, e)}
+                  onPointerMove={handlePointerMove}
                   onPointerCancel={handlePointerCancel}
                   onPointerLeave={handlePointerCancel}
-                  className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-xl shadow-sm text-left hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-primary-500 border border-transparent dark:border-slate-700 active:scale-95 flex flex-col justify-between group relative select-none touch-none"
+                  className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-xl shadow-sm text-left hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-primary-500 border border-transparent dark:border-slate-700 active:scale-95 flex flex-col justify-between group relative select-none"
                 >
                   <div className="flex justify-between items-start gap-1 w-full">
                     <p className="font-medium text-slate-900 dark:text-slate-100 text-xs md:text-sm leading-snug break-words pr-4">{p.name}</p>
