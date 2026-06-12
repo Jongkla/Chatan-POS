@@ -63,23 +63,23 @@ service cloud.firestore {
     // Users
     match /users/{userId} {
       allow read: if isEmployee();
-      allow create: if isSignedIn() && isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isSignedIn() && isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().updatedAt == request.time && incoming().createdAt == existing().createdAt;
+      allow create: if isSignedIn() && isAdmin() && isValidId(userId) && isValidUser(incoming());
+      allow update: if isSignedIn() && isAdmin() && isValidId(userId) && isValidUser(incoming()) && incoming().createdAt == existing().createdAt;
       allow delete: if isAdmin() && isValidId(userId);
     }
 
     // Products
     match /products/{productId} {
       allow read: if isEmployee();
-      allow create: if (isAdmin() || isEmployee()) && isValidId(productId) && isValidProduct(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if (isAdmin() || isEmployee()) && isValidId(productId) && isValidProduct(incoming()) && incoming().updatedAt == request.time && incoming().createdAt == existing().createdAt;
+      allow create: if (isAdmin() || isEmployee()) && isValidId(productId) && isValidProduct(incoming());
+      allow update: if (isAdmin() || isEmployee()) && isValidId(productId) && isValidProduct(incoming()) && incoming().createdAt == existing().createdAt;
       allow delete: if (isAdmin() || isEmployee()) && isValidId(productId);
     }
 
     // Transactions
     match /transactions/{transactionId} {
       allow read: if isEmployee();
-      allow create: if isEmployee() && isValidId(transactionId) && isValidTransaction(incoming()) && incoming().employeeId == request.auth.uid && incoming().createdAt == request.time;
+      allow create: if isEmployee() && isValidId(transactionId) && isValidTransaction(incoming()) && incoming().employeeId == request.auth.uid;
       allow update: if false; // immutable
       allow delete: if false; // immutable
     }
