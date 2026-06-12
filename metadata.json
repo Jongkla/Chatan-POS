@@ -1,0 +1,6 @@
+{
+  "name": "Chatan Store POS",
+  "description": "Sari-Sari POS with barcode scanning support",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
